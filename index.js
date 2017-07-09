@@ -1,7 +1,7 @@
-'use strict';
-
 /**
  The entry point.
  @module CSGOtmAPI
  **/
-module.exports = require('./csgo_tm_api');
+import api from './csgo_tm_api';
+
+export default api;
