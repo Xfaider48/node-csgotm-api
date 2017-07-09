@@ -2,6 +2,6 @@
  The entry point.
  @module CSGOtmAPI
  **/
-import api from './api';
+import api from './csgo_tm_api';
 
 export default api;
