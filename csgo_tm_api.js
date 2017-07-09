@@ -3,6 +3,7 @@
 var got = require('got'),
     util = require('util'),
     extend = require('extend'),
+    clone = require('clone'),
     Bottleneck = require("bottleneck"),
     parseCSV = require('csv-parse');
 
@@ -29,6 +30,7 @@ class CSGOtmAPI {
      * {String}     [options.apiPath='api'] Relative path to api
      * {String}     [options.apiKey=false] API key (required)
      * {Boolean}    [options.useLimiter=true] Using request limiter
+     * {Object}     [options.defaultGotOptions={}] Default parameters for 'got' module
      * {Object}     [options.limiterOptions={}] Parameters for 'bottleneck' module
      *
      * @throws {CSGOtmAPIError}
@@ -50,7 +52,8 @@ class CSGOtmAPI {
                 highWater: -1,
                 strategy: Bottleneck.strategy.LEAK,
                 rejectOnDrop: true
-            }
+            },
+            defaultGotOptions: {}
         }, options);
 
         /**
@@ -91,13 +94,19 @@ class CSGOtmAPI {
      */
     static requestJSON(url, gotOptions = {}) {
         gotOptions = gotOptions || {};
+        gotOptions = clone(gotOptions);
         gotOptions.json = true;
 
         return new Promise((resolve, reject) => {
             got(url, gotOptions).then(response => {
                 let body = response.body;
                 if (body.error) {
-                    throw new CSGOtmAPIError(body.error);
+                    let errorMessage = String(body.error);
+                    if (body.result) {
+                        errorMessage += '. ' + body.result;
+                    }
+
+                    throw new CSGOtmAPIError(errorMessage);
                 }
                 else {
                     resolve(body);
@@ -112,12 +121,13 @@ class CSGOtmAPI {
      * Get current database file data
      *
      * @param {String} dbName
+     * @param {String} baseUrl
      * @param {Object} gotOptions Options for 'got' module
      *
      * @returns {Promise}
      */
-    static itemDb(dbName, gotOptions = {}) {
-        let url = this.options.baseUrl + 'itemdb/' + dbName;
+    static itemDb(dbName, baseUrl = 'https://market.csgo.com/', gotOptions = {}) {
+        let url = baseUrl + 'itemdb/' + dbName;
         return new Promise((resolve, reject) => {
             got(url, gotOptions).then(response => {
                 parseCSV(
@@ -144,12 +154,13 @@ class CSGOtmAPI {
     /**
      * Get list of the last 50 purchases
      *
+     * @param {String} baseUrl
      * @param {Object} gotOptions Options for 'got' module
      *
      * @returns {Promise}
      */
-    static history(gotOptions = {}) {
-        let url = this.options.baseUrl + 'history/json/';
+    static history(baseUrl = 'https://market.csgo.com/', gotOptions = {}) {
+        let url = baseUrl + 'history/json/';
         return CSGOtmAPI.requestJSON(url, gotOptions);
     }
 
@@ -208,6 +219,9 @@ class CSGOtmAPI {
      */
     callMethodWithKey(method, gotOptions = {}) {
         let url = this.apiUrl + '/' + encodeURI(method) + '/?key=' + this.options.apiKey;
+        if (!Object.keys(gotOptions).length) {
+            gotOptions = this.options.defaultGotOptions;
+        }
         return this.limitRequest(() => {
             return CSGOtmAPI.requestJSON(url, gotOptions);
         });
@@ -219,7 +233,7 @@ class CSGOtmAPI {
      *
      * @param {Object} item
      * @param {String} method
-     * @param {Object}gotOptions
+     * @param {Object} gotOptions
      *
      * @returns {Promise}
      */
@@ -575,8 +589,12 @@ class CSGOtmAPI {
      * @returns {Promise}
      */
     itemMassInfo(items, params = {}, gotOptions = {}) {
+        if (!Object.keys(gotOptions).length) {
+            gotOptions = clone(this.options.defaultGotOptions);
+        }
+
         // [SELL], [BUY], [HISTORY], [INFO]
-        let url = this.apiUrl + '/MassInfo/%s/%s/%s/%s?key=%s';
+        let url = 'MassInfo/%s/%s/%s/%s';
 
         if (!Array.isArray(items)) {
             items = [items];
@@ -592,8 +610,7 @@ class CSGOtmAPI {
             params.sell,
             params.buy,
             params.history,
-            params.info,
-            this.options.apiKey
+            params.info
         );
 
         let list = [];
@@ -602,24 +619,10 @@ class CSGOtmAPI {
         });
 
         gotOptions.body = {
-            list: list
+            list: list.toString()
         };
 
-        return this.limitRequest(() => {
-            return new Promise((resolve, reject) => {
-                got(url, gotOptions).then(response => {
-                    let body = JSON.parse(response.body);
-                    if (body.error) {
-                        throw new CSGOtmAPIError(body.error);
-                    }
-                    else {
-                        resolve(body);
-                    }
-                }).catch(error => {
-                    reject(error);
-                });
-            });
-        });
+        return this.callMethodWithKey(url, gotOptions);
     }
 
     /**
@@ -756,7 +759,7 @@ class CSGOtmAPI {
     orderGetList(page = null, gotOptions = {}) {
         let url = 'GetOrders';
         page = parseInt(page);
-        if (!isNaN(page) && pade > 0) {
+        if (!isNaN(page) && page > 0) {
             url = url + '/' + String(page);
         }
 
@@ -892,7 +895,9 @@ class CSGOtmAPI {
      * @returns {Promise}
      */
     searchItemsByName(items, gotOptions = {}) {
-        let url = this.apiUrl + '/MassSearchItemByName/key=' + this.options.apiKey;
+        if (!Object.keys(gotOptions).length) {
+            gotOptions = clone(this.options.defaultGotOptions);
+        }
 
         if (!Array.isArray(items)) {
             items = [items];
@@ -908,21 +913,7 @@ class CSGOtmAPI {
             list: list
         };
 
-        return this.limitRequest(() => {
-            return new Promise((resolve, reject) => {
-                got(url, gotOptions).then(response => {
-                    let body = JSON.parse(response.body);
-                    if (body.error) {
-                        throw new CSGOtmAPIError(body.error);
-                    }
-                    else {
-                        resolve(body);
-                    }
-                }).catch(error => {
-                    reject(error);
-                });
-            });
-        });
+        return this.callMethodWithKey('MassSearchItemByName', gotOptions);
     }
 
     /**
