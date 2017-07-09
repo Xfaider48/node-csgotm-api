@@ -207,7 +207,7 @@ class CSGOtmAPI {
      * @returns {Promise}
      */
     callMethodWithKey(method, gotOptions = {}) {
-        let url = this.apiUrl + '/' + method + '/?key=' + this.options.apiKey;
+        let url = this.apiUrl + '/' + encodeURI(method) + '/?key=' + this.options.apiKey;
         return this.limitRequest(() => {
             return CSGOtmAPI.requestJSON(url, gotOptions);
         });
@@ -935,7 +935,7 @@ class CSGOtmAPI {
      */
     searchItemByName(item, gotOptions = {}) {
         item = item || {};
-        let url = this.apiUrl + '/SearchItemByName/' + item.market_hash_name;
+        let url = 'SearchItemByName/' + item.market_hash_name;
         return this.callMethodWithKey(url, gotOptions);
     }
 
@@ -1022,5 +1022,3 @@ class CSGOtmAPI {
 
 module.exports.API = CSGOtmAPI;
 module.exports.CSGOtmAPIError = CSGOtmAPIError;
-
-
