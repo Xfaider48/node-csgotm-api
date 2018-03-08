@@ -758,8 +758,8 @@ class CSGOtmAPI {
         if (!Array.isArray(items)) {
             items = [items];
         }
-
-        extend(true, params, CSGOtmAPI.DEFAULT_MASS_INFO_PARAMS);
+        
+        params = Object.assign({}, CSGOtmAPI.DEFAULT_MASS_INFO_PARAMS, params);
 
         url = util.format(url,
             params.sell,
