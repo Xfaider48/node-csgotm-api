@@ -1,4 +1,5 @@
 # CSGO.tm API
+[![npm version](https://img.shields.io/npm/v/node-csgotm-api.svg)](https://www.npmjs.com/package/node-csgotm-api)
 
 This is a node module for interacting with the csgo.tm API.
 Docs available [here](https://market.csgo.com/docs/)
