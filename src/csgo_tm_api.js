@@ -1095,12 +1095,13 @@ class CSGOtmAPI {
             items = [items];
         }
 
-        let list = [];
+        let body = {};
+        let key = 0;
         items.forEach(item => {
-            list.push(CSGOtmAPI.getItemHash(item));
+            body[`list[${key++}]`] = CSGOtmAPI.getItemHash(item);
         });
 
-        return this.callPostMethodWithKey('MassSearchItemByName', {list}, gotOptions);
+        return this.callPostMethodWithKey('MassSearchItemByName', body, gotOptions);
     }
 
     /**
