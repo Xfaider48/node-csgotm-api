@@ -39,6 +39,9 @@ jspm_packages
 # Webstorm files
 .idea
 
+# VS Code files
+.vscode
+
 # Test files
 test*
 
